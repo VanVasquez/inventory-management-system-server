@@ -73,7 +73,7 @@ app.get("/api/isLoggedIn", (req, res) => {
 //Items
 app.get("/api/inventory", (req, res) => {
   const query =
-    "SELECT *, DATE_FORMAT(`createdAt`, '%d-%m-%Y') as `createdAtFormatted`,DATE_FORMAT(`updatedAt`, '%d-%m-%Y') as `updatedAtFormatted` FROM `itemschema`.`inventory_db`;";
+    "SELECT *, DATE_FORMAT(`createdAt`, '%m/%d/%Y %H:%i:%s') as `createdAtFormatted`,DATE_FORMAT(`updatedAt`, '%m/%d/%Y %H:%i:%s') as `updatedAtFormatted` FROM `itemschema`.`inventory_db`;";
   db.query(query, (err, data) => {
     if (err) {
       console.log(err);
@@ -129,18 +129,30 @@ app.put("/api/inventory/purchase/:id", (req, res) => {
       console.log(err);
       return res.json(err);
     }
-    return res.json(data);
+    if (quantity === 0) {
+      const deleteQuery = `DELETE FROM inventory_db WHERE id = ${id}`;
+
+      db.query(deleteQuery, (err, result) => {
+        if (err) {
+          console.log(err);
+          return res.status(500).json({ message: "Internal server error" });
+        }
+
+        return res.json({ message: "Item deleted" });
+      });
+    } else {
+      return res.json({ message: "Item updated" }, data);
+    }
   });
 });
 app.put("/api/inventory/:id", (req, res) => {
   const query =
-    "UPDATE inventory_db SET `name` = ?, `brand` = ?, `category` = ?, `price` = ?, `quantity` = ?, `sellingPrice` = ? WHERE id = ?";
+    "UPDATE inventory_db SET `name` = ?, `brand` = ?, `category` = ?, `price` = ?, `sellingPrice` = ? WHERE id = ?";
   const values = [
     req.body.name,
     req.body.brand,
     req.body.category,
     req.body.price,
-    req.body.quantity,
     req.body.sellingPrice,
   ];
   db.query(query, [...values, req.params.id], (err, data) => {
@@ -148,16 +160,28 @@ app.put("/api/inventory/:id", (req, res) => {
       console.log(err);
       return res.json(err);
     }
-    return res.json(data);
+    if (quantity === 0) {
+      const deleteQuery = `DELETE FROM inventory_db WHERE id = ${id}`;
+
+      db.query(deleteQuery, (err, result) => {
+        if (err) {
+          console.log(err);
+          return res.status(500).json({ message: "Internal server error" });
+        }
+
+        return res.json({ message: "Item deleted" });
+      });
+    } else {
+      return res.json({ message: "Item updated" }, data);
+    }
   });
 });
 app.put("/api/inventory/logs/:id", (req, res) => {
   const query =
-    "UPDATE  item_log_db  SET `name` = ?, `brand` = ?, `quantity` = ?, `cost` = ?, `sellingPrice` = ?) WHERE) id = ?";
+    "UPDATE  item_log_db  SET `name` = ?, `brand` = ?, `cost` = ?, `sellingPrice` = ? WHERE id = ?";
   const values = [
     req.body.name,
     req.body.brand,
-    req.body.quantity,
     req.body.price,
     req.body.sellingPrice,
   ];
@@ -166,7 +190,20 @@ app.put("/api/inventory/logs/:id", (req, res) => {
       console.log(err);
       return res.json(err);
     }
-    return res.json(data);
+    if (quantity === 0) {
+      const deleteQuery = `DELETE FROM item_log_db WHERE id = ${id}`;
+
+      db.query(deleteQuery, (err, result) => {
+        if (err) {
+          console.log(err);
+          return res.status(500).json({ message: "Internal server error" });
+        }
+
+        return res.json({ message: "Item deleted" });
+      });
+    } else {
+      return res.json({ message: "Item updated" }, data);
+    }
   });
 });
 
@@ -215,6 +252,97 @@ app.get("/api/log", (req, res) => {
 app.get("/api/transact/:id", (req, res) => {
   const query = "SELECT * FROM transact WHERE transact_id = ?";
   db.query(query, req.params.id, (err, data) => {
+    if (err) {
+      console.log(err);
+      return res.json(err);
+    }
+    return res.json(data);
+  });
+});
+
+app.get("/api/purchase/added", (req, res) => {
+  const query = "SELECT * FROM purchase_log_db";
+  db.query(query, (err, data) => {
+    if (err) {
+      console.log(err);
+      return res.json(err);
+    }
+    return res.json(data);
+  });
+});
+
+app.post("/api/purchase", (req, res) => {
+  const query =
+    "INSERT INTO purchase_log_db (`item`, `brand`, `category`, `quantity`, `price`, `sellingPrice`, `totalPrice`) VALUES (?);";
+  const values = [
+    req.body.name,
+    req.body.brand,
+    req.body.category,
+    req.body.quantity,
+    req.body.price,
+    req.body.sellingPrice,
+    req.body.totalPrice,
+  ];
+  db.query(query, [values], (err, data) => {
+    if (err) {
+      console.log(err);
+      return res.json(err);
+    }
+    return res.json(data);
+  });
+});
+
+app.post("/api/purchase/new", (req, res) => {
+  const query = "INSERT INTO transact (`totalSum`) VALUES (?)";
+  const value = req.body.totalSum;
+  db.query(query, value, (err, data) => {
+    if (err) {
+      console.log(err);
+      return res.json(err);
+    }
+    return res.json(data);
+  });
+});
+
+app.post("/api/purchase/clear", (req, res) => {
+  const query = "truncate purchase_log_db";
+  db.query(query, (err, data) => {
+    if (err) {
+      console.log(err);
+      return res.json(err);
+    }
+    return res.json(data);
+  });
+});
+
+app.post("/api/sales/add", (req, res) => {
+  const data = req.body;
+  const query =
+    "INSERT INTO sales_db (`transact_id`, `item`, `brand`, `category`, `price`, `sellPrice`, `quantity`, `totalPrice`) VALUES ?;";
+  const values = data.map((row) => [
+    row.transactId,
+    row.desc,
+    row.brand,
+    row.category,
+    row.price,
+    row.sellPrice,
+    row.unit,
+    row.totalprice,
+  ]);
+  db.query(query, [values], (err, data) => {
+    if (err) {
+      console.log(err);
+      return res.json(err);
+    }
+    return res.json(data);
+  });
+});
+
+app.put("/api/transact/:id", (req, res) => {
+  const query = "UPDATE transact SET `totalSum` = ? WHERE transact_id = ?";
+  const values = req.body.totalSum;
+  console.log(values);
+  db.query(query, [values, req.params.id], (err, data) => {
     if (err) {
       console.log(err);
       return res.json(err);
