@@ -12,7 +12,6 @@ app.use(cors());
 //User Accounts
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
   db.query(
     "SELECT * FROM user_accounts WHERE user_email = ? AND user_password = ?",
     [email, password],
@@ -129,8 +128,8 @@ app.put("/api/inventory/purchase/:id", (req, res) => {
       console.log(err);
       return res.json(err);
     }
-    if (quantity === 0) {
-      const deleteQuery = `DELETE FROM inventory_db WHERE id = ${id}`;
+    if (req.body.quantity === 0) {
+      const deleteQuery = `DELETE FROM inventory_db WHERE id = ${req.params.id}`;
 
       db.query(deleteQuery, (err, result) => {
         if (err) {
@@ -159,18 +158,6 @@ app.put("/api/inventory/:id", (req, res) => {
     if (err) {
       console.log(err);
       return res.json(err);
-    }
-    if (quantity === 0) {
-      const deleteQuery = `DELETE FROM inventory_db WHERE id = ${id}`;
-
-      db.query(deleteQuery, (err, result) => {
-        if (err) {
-          console.log(err);
-          return res.status(500).json({ message: "Internal server error" });
-        }
-
-        return res.json({ message: "Item deleted" });
-      });
     } else {
       return res.json({ message: "Item updated" }, data);
     }
@@ -314,7 +301,6 @@ app.post("/api/purchase/clear", (req, res) => {
     return res.json(data);
   });
 });
-
 app.post("/api/sales/add", (req, res) => {
   const data = req.body;
   const query =
@@ -329,22 +315,37 @@ app.post("/api/sales/add", (req, res) => {
     row.unit,
     row.totalprice,
   ]);
-  db.query(query, [values], (err, data) => {
+  db.query(query, [values], (err, result) => {
     if (err) {
       console.log(err);
       return res.json(err);
     }
-    return res.json(data);
+    let updateQuery =
+      "UPDATE inventory_db SET `quantity` = `quantity` - CASE `name` ";
+    const updateValues = [];
+
+    data.forEach((row) => {
+      updateQuery += `WHEN '${row.desc}' THEN ? `;
+      updateValues.push(row.unit);
+    });
+
+    updateQuery += "ELSE 0 END WHERE `name` IN (?)";
+    updateValues.push(data.map((row) => row.desc));
+
+    db.query(updateQuery, updateValues, (err, result) => {
+      if (err) {
+        return res.json(err);
+      }
+      return res.json(result);
+    });
   });
 });
 
 app.put("/api/transact/:id", (req, res) => {
   const query = "UPDATE transact SET `totalSum` = ? WHERE transact_id = ?";
   const values = req.body.totalSum;
-  console.log(values);
   db.query(query, [values, req.params.id], (err, data) => {
     if (err) {
-      console.log(err);
       return res.json(err);
     }
     return res.json(data);
