@@ -140,7 +140,7 @@ app.put("/api/inventory/purchase/:id", (req, res) => {
         return res.json({ message: "Item deleted" });
       });
     } else {
-      return res.json({ message: "Item updated" }, data);
+      return res.status(200).json({ message: "Item updated", data: data });
     }
   });
 });
@@ -159,7 +159,7 @@ app.put("/api/inventory/:id", (req, res) => {
       console.log(err);
       return res.json(err);
     } else {
-      return res.json({ message: "Item updated" }, data);
+      return res.status(200).json({ message: "Item updated", data: data });
     }
   });
 });
@@ -176,20 +176,8 @@ app.put("/api/inventory/logs/:id", (req, res) => {
     if (err) {
       console.log(err);
       return res.json(err);
-    }
-    if (quantity === 0) {
-      const deleteQuery = `DELETE FROM item_log_db WHERE id = ${id}`;
-
-      db.query(deleteQuery, (err, result) => {
-        if (err) {
-          console.log(err);
-          return res.status(500).json({ message: "Internal server error" });
-        }
-
-        return res.json({ message: "Item deleted" });
-      });
     } else {
-      return res.json({ message: "Item updated" }, data);
+      return res.status(200).json({ message: "Item updated", data: data });
     }
   });
 });
