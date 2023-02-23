@@ -72,7 +72,7 @@ app.get("/api/isLoggedIn", (req, res) => {
 //Items
 app.get("/api/inventory", (req, res) => {
   const query =
-    "SELECT *, DATE_FORMAT(`createdAt`, '%m/%d/%Y %H:%i:%s') as `createdAtFormatted`,DATE_FORMAT(`updatedAt`, '%m/%d/%Y %H:%i:%s') as `updatedAtFormatted` FROM `itemschema`.`inventory_db`;";
+    "SELECT *, DATE_FORMAT(`createdAt`, '%m/%d/%Y %H:%i:%s') as `createdAtFormatted`,DATE_FORMAT(`updatedAt`, '%m/%d/%Y') as `updatedAtFormatted` FROM `itemschema`.`inventory_db`;";
   db.query(query, (err, data) => {
     if (err) {
       console.log(err);
@@ -203,7 +203,8 @@ app.get("/api/transact", (req, res) => {
 });
 
 app.get("/api/sales", (req, res) => {
-  const query = "SELECT * FROM sales_db";
+  const query =
+    "SELECT *, DATE_FORMAT(`date`, '%m/%d/%Y') as `dateFormatted`  FROM sales_db";
   db.query(query, (err, data) => {
     if (err) {
       console.log(err);
@@ -214,7 +215,7 @@ app.get("/api/sales", (req, res) => {
 });
 app.get("/api/log", (req, res) => {
   const query =
-    "SELECT *, DATE_FORMAT(`updatedAt`, '%d-%m-%Y') as `dateFormatted` FROM `itemschema`.`item_log_db`";
+    "SELECT *, DATE_FORMAT(`updatedAt`,'%m/%d/%Y')  as `dateFormatted` FROM `itemschema`.`item_log_db`";
   db.query(query, req.params.id, (err, data) => {
     if (err) {
       console.log(err);
