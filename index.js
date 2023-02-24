@@ -246,10 +246,14 @@ app.get("/api/purchase/added", (req, res) => {
     return res.json(data);
   });
 });
-
 app.post("/api/purchase", (req, res) => {
-  const query =
-    "INSERT INTO purchase_log_db (`item`, `brand`, `category`, `quantity`, `price`, `sellingPrice`, `totalPrice`) VALUES (?);";
+  const selectQuery =
+    "SELECT * FROM purchase_log_db WHERE `item` = ? AND `brand` = ?";
+  const insertQuery =
+    "INSERT INTO purchase_log_db (`item`, `brand`, `category`, `quantity`, `price`, `sellingPrice`, `totalPrice`) VALUES (?,?,?,?,?,?,?)";
+  const updateQuery =
+    "UPDATE purchase_log_db SET `quantity` = `quantity` + ? WHERE `item` = ? AND `brand` = ?";
+
   const values = [
     req.body.name,
     req.body.brand,
@@ -259,12 +263,34 @@ app.post("/api/purchase", (req, res) => {
     req.body.sellingPrice,
     req.body.totalPrice,
   ];
-  db.query(query, [values], (err, data) => {
+
+  db.query(selectQuery, [req.body.name, req.body.brand], (err, result) => {
     if (err) {
       console.log(err);
       return res.json(err);
     }
-    return res.json(data);
+
+    if (result.length > 0) {
+      db.query(
+        updateQuery,
+        [req.body.quantity, req.body.name, req.body.brand],
+        (err, data) => {
+          if (err) {
+            console.log(err);
+            return res.json(err);
+          }
+          return res.json(data);
+        }
+      );
+    } else {
+      db.query(insertQuery, values, (err, data) => {
+        if (err) {
+          console.log(err);
+          return res.json(err);
+        }
+        return res.json(data);
+      });
+    }
   });
 });
 
@@ -317,10 +343,11 @@ app.post("/api/sales/add", (req, res) => {
       updateQuery += `WHEN '${row.desc}' THEN ? `;
       updateValues.push(row.unit);
     });
-
-    updateQuery += "ELSE 0 END WHERE `name` IN (?)";
-    updateValues.push(data.map((row) => row.desc));
-
+    updateQuery +=
+      "ELSE 0 END WHERE `name` IN (" +
+      data.map((row) => `'${row.desc}'`).join(",") +
+      ")";
+    console.log(updateQuery);
     db.query(updateQuery, updateValues, (err, result) => {
       if (err) {
         return res.json(err);
